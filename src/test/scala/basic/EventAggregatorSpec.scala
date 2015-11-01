@@ -30,7 +30,7 @@ class EventAggregatorSpec extends FreeSpec with Matchers with ScalatestRouteTest
 
   "The EventAggregator" - {
     "when calling GET /CountEvent?EventType=MyEvent2&StartTime=1436131568000&EndTime=1456131568000" - {
-      "should return empty json" in {
+      "it should not have any event count" in {
         Get("/CountEvent?EventType=MyEvent2&StartTime=1436131568000&EndTime=1456131568000") ~> eventAggregatorRoute ~> check {
           status === StatusCodes.OK
           mediaType === MediaTypes.`application/json`
@@ -40,21 +40,21 @@ class EventAggregatorSpec extends FreeSpec with Matchers with ScalatestRouteTest
       }
     }
     "when calling POST SendEvent" - {
-      "should return Created" in {
+      "it should return Created if that event wasn't already added in the eventList" in {
         for (i <- 0 to 8) {
           Post("/SendEvent", eventList(i)) ~> eventAggregatorRoute ~> check {
             status should equal(StatusCodes.Created)
           }
         }
       }
-      "should return Conflict" in {
+      "it should return Conflict if that event was already added in the eventList" in {
         Post("/SendEvent", eventList(9)) ~> eventAggregatorRoute ~> check {
           status should equal(StatusCodes.Conflict)
         }
       }
     }
     "when calling GET GetEvent" - {
-      "should return json with an event" in {
+      "it should return json with the list of event" in {
         Get("/GetEvent") ~> eventAggregatorRoute ~> check {
           status === StatusCodes.OK
           mediaType === MediaTypes.`application/json`
@@ -73,13 +73,12 @@ class EventAggregatorSpec extends FreeSpec with Matchers with ScalatestRouteTest
       }
     }
     "when calling GET /CountEvent?EventType=event0&StartTime=1446031568000&EndTime=1446231568000" - {
-      "should return one count" in {
+      "it should return number of event with event0 group by minute" in {
         Get("/CountEvent?EventType=event0&StartTime=1446031568000&EndTime=1446231568000") ~> eventAggregatorRoute ~> check {
           status === StatusCodes.OK
           mediaType === MediaTypes.`application/json`
           val response = responseAs[Map[String, Int]]
           response.size should equal(2)
-          // response.getOrElse("2015-10-29 15:12",null) should equal(1)
           response.getOrElse(dateToString(roundDateToMinute(eventList(0).Timestamp)),null) should equal(4)
           response.getOrElse(dateToString(roundDateToMinute(eventList(4).Timestamp)),null) should equal(1)
           response.getOrElse(dateToString(roundDateToMinute(eventList(5).Timestamp)),null) === null
@@ -87,13 +86,12 @@ class EventAggregatorSpec extends FreeSpec with Matchers with ScalatestRouteTest
       }
     }
     "when calling GET /CountEvent?EventType=event1&StartTime=1446031568000&EndTime=1446231568000" - {
-      "should return one count" in {
+      "it should return number of event with event1 group by minute" in {
         Get("/CountEvent?EventType=event1&StartTime=1446031568000&EndTime=1446231568000") ~> eventAggregatorRoute ~> check {
           status === StatusCodes.OK
           mediaType === MediaTypes.`application/json`
           val response = responseAs[Map[String, Int]]
           response.size should equal(3)
-          // response.getOrElse("2015-10-29 15:12",null) should equal(1)
           response.getOrElse(dateToString(roundDateToMinute(eventList(0).Timestamp)),null) === null
           response.getOrElse(dateToString(roundDateToMinute(eventList(5).Timestamp)),null) should equal(2)
           response.getOrElse(dateToString(roundDateToMinute(eventList(6).Timestamp)),null) should equal(1)
