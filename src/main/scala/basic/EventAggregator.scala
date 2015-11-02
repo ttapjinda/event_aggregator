@@ -1,18 +1,20 @@
 package com.tayida.eventaggregator
 package basic
 
-import scala.concurrent.duration._
-
-import akka.actor.{ Actor, ActorLogging }
+import akka.actor.{ Actor, ActorLogging, Props }
 import akka.util.Timeout
+import akka.pattern.ask
 import spray.http._
 import MediaTypes._
 import spray.routing._
 import spray.http.StatusCodes._
+import spray.httpx.SprayJsonSupport._
 import scala.collection.immutable.ListMap
+import scala.concurrent.duration._
+import scala.concurrent.Await
 
 /* Server Actor */
-class EventAggregatorActor extends Actor with EventAggregatorService with ActorLogging {
+class EventAggregatorActor extends Actor with ActorLogging with EventAggregatorService {
   def actorRefFactory = context
   def receive = runRoute(eventAggregatorRoute)
 }
@@ -21,14 +23,22 @@ class EventAggregatorActor extends Actor with EventAggregatorService with ActorL
 trait EventAggregatorService extends HttpService {
   // import json protocal for event class
   import EventProtocol._
+  // import EventCollector used as a data collection
+  import EventCollectorActor._
+  // import Aggregator used to aggregate the event data
+  import AggregatorActor._
 
-  // in-memory data
-  // collecting all events received through SendEvent
-  var events = Vector[Event]()
+  // // in-memory data
+  // // collecting all events received through SendEvent
+  // var events = Vector[Event]()
+
+  // init used actors
+  val eventCollector = actorRefFactory.actorOf(Props[EventCollectorActor], "eventCollector")
+  val aggregatorActor = actorRefFactory.actorOf(Props[AggregatorActor], "aggregatorActor")
 
   //These implicit values allow us to use futures
   //in this trait.
-  implicit def executionContext = actorRefFactory.dispatcher
+  // implicit def executionContext = actorRefFactory.dispatcher
   implicit val timeout = Timeout(5 seconds)
 
   val eventAggregatorRoute = {
@@ -40,13 +50,11 @@ trait EventAggregatorService extends HttpService {
         entity(as[Event]) { event =>
           requestContext =>
           // c. This endpoint 'writes' event data to your system if the data is valid and rejects any input which is invalid
-          // add Event to events' list
-          addEvent(event) match {
-            // Event added
-            case true  => {
+          // send event to eventCollector
+          Await.result(eventCollector ? AddEvent(event), timeout.duration) match {
+            case EventAdded  => {
               requestContext.complete(StatusCodes.Created)
             }
-            // Event added fail (event already exist in list)
             case _  => {
               requestContext.complete(StatusCodes.Conflict)
             }
@@ -63,59 +71,24 @@ trait EventAggregatorService extends HttpService {
           // b. return a JSON document containing information about all the events with the specified <EventType> between <StartDate> and <EndDate>
           respondWithMediaType(`application/json`) {
             complete {
-              // c. group the events by minute and return the count of events in that minute
-              // Count Event per minute
-              countPerMinute(filterEvent(eventtype, starttime, endtime))
+              countPerMinute(doQueryEvent(eventtype, starttime, endtime))
             }
           }
         }
       }
-    } ~
-    path("GetEvent") {
-      get {
-        // Get parameters from URL
-          respondWithMediaType(`application/json`) {
-            complete {
-              // Count Event per minute
-              events
-            }
-          }
-      }
     }
-  }
-
-  // add Event to events' list if it does not exist
-  private def addEvent(event: Event): Boolean = {
-    val doesNotExist = !events.exists(_ == event)
-    if (doesNotExist) events = events :+ event
-    doesNotExist
-  }
-
-  // filter Event with the same EventType and having Timestamp between StartTime and EndTime
-  private def filterEvent(EventType: String, StartTime: Long, EndTime: Long): Vector[Event] = {
-    val filteredEvents = events.filter(x => (x.EventType == EventType && x.Timestamp > StartTime && x.Timestamp < EndTime))
-    filteredEvents
   }
 
   // Count Event per minute
   private def countPerMinute(input: Vector[Event]): Map[String, Int] = {
-    val result = input.groupBy(x => dateToString(roundDateToMinute(x.Timestamp))).mapValues(k => k.length)
-    val result2 = ListMap(result.toSeq.sortWith(_._1 < _._1):_*)
-    result2
+    val result = Await.result(aggregatorActor ? AggregateEvent(input), timeout.duration).asInstanceOf[AggregateResult]
+    result.result
   }
 
-  // Round Date to minute
-  def roundDateToMinute(input: Long): java.util.Date = {
-    val result = new java.util.Date((java.lang.Math.floor(input/60000)*60000).asInstanceOf[Long])
-    result
-  }
-
-  // Date to String in order to print out as JSON
-  def dateToString(input: java.util.Date): String = {
-    var dateformat = new java.text.SimpleDateFormat("YYYY-MM-dd HH:mm");
-    dateformat.setTimeZone(java.util.TimeZone.getTimeZone("Etc/UTC"));
-    val result = dateformat.format(input)
-    result
+  // query events from eventCollector
+  def doQueryEvent(EventType: String, StartTime: Long, EndTime: Long) = {
+    val result = Await.result(eventCollector ? QueryEvent(EventType, StartTime, EndTime), timeout.duration).asInstanceOf[QueryResult]
+    result.result
   }
 
 }
