@@ -5,16 +5,14 @@ import org.scalatest._
 import spray.testkit.ScalatestRouteTest
 import spray.http._
 import MediaTypes._
-// import HttpEntity._
 import ContentTypes._
-// import spray.can.server.Stats
 import StatusCodes._
-// import org.json4s._
 import EventProtocol._
 
 class EventAggregatorSpec extends FreeSpec with Matchers with ScalatestRouteTest with EventAggregatorService {
   def actorRefFactory = system
 
+  // test data
   val eventList = List(
     Event("event0", 1446131568000L), //29 Oct 2015 15:12:48
     Event("event0", 1446131520000L), //29 Oct 2015 15:12:00
@@ -29,8 +27,8 @@ class EventAggregatorSpec extends FreeSpec with Matchers with ScalatestRouteTest
   )
 
   "The EventAggregator" - {
-    "when calling GET /CountEvent?EventType=MyEvent2&StartTime=1436131568000&EndTime=1456131568000" - {
-      "it should not have any event count" in {
+    "when there is no event data and calling GET /CountEvent" - {
+      "it should return empty json hash" in {
         Get("/CountEvent?EventType=MyEvent2&StartTime=1436131568000&EndTime=1456131568000") ~> eventAggregatorRoute ~> check {
           status === StatusCodes.OK
           mediaType === MediaTypes.`application/json`

@@ -11,17 +11,19 @@ import spray.routing._
 import spray.http.StatusCodes._
 import scala.collection.immutable.ListMap
 
-/* Our Server Actor is pretty lightweight; simply mixing in our route trait and logging */
+/* Server Actor */
 class EventAggregatorActor extends Actor with EventAggregatorService with ActorLogging {
   def actorRefFactory = context
   def receive = runRoute(eventAggregatorRoute)
 }
 
-/* Our route directives, the heart of the service.
- * Note you can mix-in dependencies should you so chose */
+/* route directives */
 trait EventAggregatorService extends HttpService {
+  // import json protocal for event class
   import EventProtocol._
-  // import WorkerActor._
+
+  // in-memory data
+  // collecting all events received through SendEvent
   var events = Vector[Event]()
 
   //These implicit values allow us to use futures
@@ -30,19 +32,21 @@ trait EventAggregatorService extends HttpService {
   implicit val timeout = Timeout(5 seconds)
 
   val eventAggregatorRoute = {
+    // 1. SendEvent endpoint
     path("SendEvent") {
+      // a. accept an HTTP POST containing details of an event in JSON
       post {
         // get Event from request's body
         entity(as[Event]) { event =>
           requestContext =>
-          // val responder = createResponder(requestContext)
+          // c. This endpoint 'writes' event data to your system if the data is valid and rejects any input which is invalid
           // add Event to events' list
           addEvent(event) match {
             // Event added
             case true  => {
               requestContext.complete(StatusCodes.Created)
             }
-            // Event added fail
+            // Event added fail (event already exist in list)
             case _  => {
               requestContext.complete(StatusCodes.Conflict)
             }
@@ -50,12 +54,16 @@ trait EventAggregatorService extends HttpService {
         }
       }
     } ~
+    // 2. CountEvents endpoint
     path("CountEvent") {
+      // a. This endpoint must accept an HTTP GET which has 3 query parameters
       get {
         // Get parameters from URL
         parameters('EventType, 'StartTime.as[Long], 'EndTime.as[Long]) { (eventtype, starttime, endtime) =>
+          // b. return a JSON document containing information about all the events with the specified <EventType> between <StartDate> and <EndDate>
           respondWithMediaType(`application/json`) {
             complete {
+              // c. group the events by minute and return the count of events in that minute
               // Count Event per minute
               countPerMinute(filterEvent(eventtype, starttime, endtime))
             }

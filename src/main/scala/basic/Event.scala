@@ -10,5 +10,8 @@ object EventProtocol extends Json4sSupport {
   implicit def json4sFormats: Formats = DefaultFormats
 }
 
-/* Our case class, used for request and responses */
+/* Event Class */
+// b. The JSON document should have 2 fields
+// 		i. EventType - A string which determines the type of event e.g. "PageView"
+// 		ii. Timestamp - The time at which the event happened in epoch
 case class Event(EventType: String, Timestamp: Long)
