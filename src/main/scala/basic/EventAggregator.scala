@@ -5,11 +5,8 @@ import akka.actor.{ Actor, ActorLogging, Props }
 import akka.util.Timeout
 import akka.pattern.ask
 import spray.http._
-import MediaTypes._
 import spray.routing._
-import spray.http.StatusCodes._
 import spray.httpx.SprayJsonSupport._
-import scala.collection.immutable.ListMap
 import scala.concurrent.duration._
 import scala.concurrent.Await
 

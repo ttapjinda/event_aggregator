@@ -1,8 +1,6 @@
 package com.tayida.eventaggregator
 
-// import scala.concurrent.duration._ 
-
-import akka.actor.{ Actor, ActorSystem, Props }
+import akka.actor.{ ActorSystem, Props }
 import akka.io.IO
 import spray.can.Http
 import basic._

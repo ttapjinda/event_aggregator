@@ -1,7 +1,7 @@
 package com.tayida.eventaggregator
 package basic
 
-import akka.actor.{ Actor, ActorSystem, Props, ActorLogging }
+import akka.actor.{ Actor, ActorLogging }
 
 /* EventCollectorActor Actor
     working as the database, collecting all events */
