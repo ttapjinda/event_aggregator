@@ -57,20 +57,26 @@ class EventCollectorSpec extends TestKit(ActorSystem("EventCollectorSpec"))
       }
     }
     "QueryEvent" - {
-      "it should response with QueryResult contains a Vector with length 5" in {
-        val result = Await.result(actorRef ? QueryEvent("event0", 1445131568000L, 1447131568000L), timeout.duration).asInstanceOf[QueryResult]
-        result.result.length should equal(5)
-        result.result(0) should equal(eventList(0))
-      }
-      "it should response with QueryResult contains a Vector with length 1" in {
-        val result = Await.result(actorRef ? QueryEvent("event0", 1445131568000L, 1446131520000L), timeout.duration).asInstanceOf[QueryResult]
-        result.result.length should equal(1)
-        result.result(0) should not equal(eventList(0))
-        result.result(0) should equal(eventList(4))
-      }
-      "it should response with QueryResult contains a Vector with length 0" in {
-        val result = Await.result(actorRef ? QueryEvent("event2", 1445131568000L, 1447131568000L), timeout.duration).asInstanceOf[QueryResult]
-        result.result.length should equal(0)
+      "after all event in eventList are added" - {
+        "it should response with QueryResult contains a Vector with length 5 (eventList(0),eventList(1),eventList(2),eventList(3),eventList(4))" in {
+          val result = Await.result(actorRef ? QueryEvent("event0", 1445131568000L, 1447131568000L), timeout.duration).asInstanceOf[QueryResult]
+          result.result.length should equal(5)
+          result.result(0) should equal(eventList(0))
+          result.result(1) should equal(eventList(1))
+          result.result(2) should equal(eventList(2))
+          result.result(3) should equal(eventList(3))
+          result.result(4) should equal(eventList(4))
+        }
+        "it should response with QueryResult contains a Vector with length 1 (eventList(4))" in {
+          val result = Await.result(actorRef ? QueryEvent("event0", 1445131568000L, 1446131520000L), timeout.duration).asInstanceOf[QueryResult]
+          result.result.length should equal(1)
+          result.result(0) should not equal(eventList(0))
+          result.result(0) should equal(eventList(4))
+        }
+        "it should response with QueryResult contains a Vector with length 0" in {
+          val result = Await.result(actorRef ? QueryEvent("event2", 1445131568000L, 1447131568000L), timeout.duration).asInstanceOf[QueryResult]
+          result.result.length should equal(0)
+        }
       }
     }
   }

@@ -75,7 +75,7 @@ class EventAggregatorSpec extends FreeSpec with Matchers with ScalatestRouteTest
     }
     "2. CountEvents endpoint" - {
       "a. This endpoint must accept an HTTP GET which has 3 query parameters" - {
-        "it should response with OK Status if the request has 3 query parameters" in {
+        "it should response with OK Status if the request has 3 correct query parameters" in {
           Get("/CountEvent?EventType=event0&StartTime=1446031568000&EndTime=1446231568000") ~> eventAggregatorRoute ~> check {
             status should equal(StatusCodes.OK)
           }
