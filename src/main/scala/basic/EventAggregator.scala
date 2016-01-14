@@ -66,7 +66,7 @@ trait EventAggregatorService extends HttpService {
         // Get parameters from URL
         parameters('EventType, 'StartTime.as[Long], 'EndTime.as[Long]) { (eventtype, starttime, endtime) =>
           // b. return a JSON document containing information about all the events with the specified <EventType> between <StartDate> and <EndDate>
-          respondWithMediaType(`application/json`) {
+          respondWithMediaType(MediaTypes.`application/json`) {
             complete {
               countPerMinute(doQueryEvent(eventtype, starttime, endtime))
             }
